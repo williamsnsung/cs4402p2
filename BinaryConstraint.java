@@ -19,4 +19,16 @@ public final class BinaryConstraint {
   }
   
   // SUGGESTION: You will want to add methods here to reason about the constraint
+
+  public int getFirstVar() {
+    return firstVar;
+  }
+
+  public int getSecondVar() {
+    return secondVar;
+  }
+
+  public ArrayList<BinaryTuple> getTuples() {
+    return tuples;
+  }
 }

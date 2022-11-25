@@ -16,6 +16,36 @@
             "request": "launch",
             "mainClass": "BinaryCSPReader",
             "args": ["./instances/4Queens.csp"],
+        },
+        {
+            "type": "java",
+            "name": "Solve 4Queens FC ASC",
+            "request": "launch",
+            "mainClass": "Solver",
+            "args": ["./instances/4Queens.csp", "fc", "asc", "asc"],
+        },
+        {
+            "type": "java",
+            "name": "Solve 4Queens FC SDF",
+            "request": "launch",
+            "mainClass": "Solver",
+            "args": ["./instances/4Queens.csp", "fc", "sdf", "asc"],
+        }
+        ,
+        {
+            "type": "java",
+            "name": "Solve 4Queens MAC ASC",
+            "request": "launch",
+            "mainClass": "Solver",
+            "args": ["./instances/4Queens.csp", "mac", "asc", "asc"],
+        }
+        ,
+        {
+            "type": "java",
+            "name": "Solve 4Queens MAC SDF",
+            "request": "launch",
+            "mainClass": "Solver",
+            "args": ["./instances/4Queens.csp", "mac", "sdf", "asc"],
         }
     ]
 }

@@ -1,14 +1,16 @@
 import java.util.ArrayList;
 import java.util.PriorityQueue;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
 
 public class Solver {
     String algorithm;
     String varOrder;
     String valOrder;
     BinaryCSP csp;
+    //TODO choose better data structure for domains
     ArrayList<PriorityQueue<Integer>> domains;
-    ArrayList<Integer> assignments; 
+    ArrayList<Boolean> assigned;
+    ArrayList<ArrayList<Integer>> arcs;
     int searchNodes;
     int arcRevisions;
 
@@ -20,14 +22,20 @@ public class Solver {
         this.searchNodes = 0;
         this.arcRevisions = 0;
         this.domains = new ArrayList<>();
-        this.assignments = new ArrayList<>();
+        this.assigned = new ArrayList<>();
+        this.arcs = new ArrayList<>();
         for (int i = 0; i < csp.getNoVariables(); i++) {
             PriorityQueue<Integer> domain = new PriorityQueue<>();
             for (int j = csp.getLB(i); j < csp.getUB(i) + 1; j++) {
                 domain.add(j);
             }
             this.domains.add(domain);
-            this.assignments.add(-1);
+            this.assigned.add(false);
+            this.arcs.add(new ArrayList<>());
+        }
+        for (BinaryConstraint constraint : csp.getConstraints()) {
+            this.arcs.get(constraint.getFirstVar()).add(constraint.getSecondVar());
+            this.arcs.get(constraint.getSecondVar()).add(constraint.getFirstVar());
         }
     }
 
@@ -35,56 +43,18 @@ public class Solver {
         return this.algorithm;
     }
 
-
-
-    public void setAlgorithm(String algorithm) {
-        this.algorithm = algorithm;
-    }
-
-
-
-    public String getVarOrder() {
-        return this.varOrder;
-    }
-
-
-
-    public void setVarOrder(String varOrder) {
-        this.varOrder = varOrder;
-    }
-
-
-
-    public String getValOrder() {
-        return this.valOrder;
-    }
-
-
-
-    public void setValOrder(String valOrder) {
-        this.valOrder = valOrder;
-    }
-
-
-
     public BinaryCSP getCsp() {
         return this.csp;
     }
 
-
-
-    public void setCsp(BinaryCSP csp) {
-        this.csp = csp;
-    }
-
     public boolean completeAssignment() {
         int assigned = 0;
-        for (Integer i : this.assignments) {
-            if (i != -1) {
+        for (boolean bool : this.assigned) {
+            if (bool) {
                 assigned++;
             }
         }
-        if (assigned == this.assignments.size()) {
+        if (assigned == this.domains.size()) {
             return true;
         }
         return false;
@@ -93,20 +63,66 @@ public class Solver {
     public void printSolution() {
         System.out.println(this.searchNodes);
         System.out.println(this.arcRevisions);
-        for (Integer i : this.assignments) {
-            System.out.println(i);
+        for (PriorityQueue<Integer> q : this.domains) {
+            System.out.println(q.peek());
         }
         System.out.println();
     }
 
-    //TODO
     public boolean revise(int futureVar, int var) {
-        boolean revised = false;
-
-        return revised;
+        this.arcRevisions++;
+        // if var is assigned and if var is not assigned
+        for (BinaryConstraint constraint : this.csp.getConstraints()) {
+            int firstVar = constraint.getFirstVar();
+            int secondVar = constraint.getSecondVar();
+            if (firstVar == futureVar && secondVar == var) {
+                PriorityQueue<Integer> updatedFutureDomain = new PriorityQueue<>(this.domains.get(futureVar));
+                for (Integer di : this.domains.get(futureVar)) {
+                    boolean supported = false;
+                    for (Integer dj : this.domains.get(var)) {
+                        if(supported) {
+                            break;
+                        }
+                        for (BinaryTuple t : constraint.getTuples()) {
+                            if (t.matches(di, dj)) {
+                                supported = true;
+                            }
+                        }
+                    }
+                    if (!supported) {
+                        updatedFutureDomain.remove(di);
+                    }
+                }
+                this.domains.set(futureVar, updatedFutureDomain);
+            }
+            else if (firstVar == var && secondVar == futureVar) {
+                PriorityQueue<Integer> updatedFutureDomain = new PriorityQueue<>(this.domains.get(futureVar));
+                for (Integer di : this.domains.get(futureVar)) {
+                    boolean supported = false;
+                    for (Integer dj : this.domains.get(var)) {
+                        if(supported) {
+                            break;
+                        }
+                        for (BinaryTuple t : constraint.getTuples()) {
+                            if (t.matches(dj, di)) {
+                                supported = true;
+                            }
+                        }
+                    }
+                    if (!supported) {
+                        updatedFutureDomain.remove(di);
+                    }
+                }
+                this.domains.set(futureVar, updatedFutureDomain);
+            }
+        }
+        if (this.domains.get(futureVar).size() == 0) {
+            return false;
+        }
+        return true;
     }
 
-    public boolean reviseFutureArcs(LinkedHashSet<Integer> varList, int var) {
+    public boolean reviseFutureArcs(LinkedList<Integer> varList, int var) {
         boolean consistent = true;
         for (int futureVar : varList) {
             if (futureVar != var) {
@@ -118,17 +134,39 @@ public class Solver {
         }
         return true;
     }
+    
+    public ArrayList<PriorityQueue<Integer>> undoPruning() {
+        ArrayList<PriorityQueue<Integer>> res = new ArrayList<>(this.domains);
+        for (int i = 0; i < res.size(); i++) {
+            res.set(i, new PriorityQueue<>(res.get(i)));
+        }
+        return res;
+    }
 
-    public void branchFCLeft(LinkedHashSet<Integer> varList, int var, int val) {
-        this.assignments.set(var, val);
-        ArrayList<PriorityQueue<Integer>> undoPruning = new ArrayList<>(this.domains);
+    public PriorityQueue<Integer> assign(int var, int val) {
+        PriorityQueue<Integer> original = new PriorityQueue<>(this.domains.get(var));
+        this.domains.set(var, new PriorityQueue<>());
+        this.domains.get(var).add(val);
+        this.assigned.set(var, true);
+        return original;
+    }
+
+    public void unassign(int var, PriorityQueue<Integer> original) {
+        this.domains.set(var, original);
+        this.assigned.set(var, false);
+    }
+
+    public void branchFCLeft(LinkedList<Integer> varList, int var, int val) {
+        this.searchNodes++;
+        PriorityQueue<Integer> original = assign(var, val);
+        ArrayList<PriorityQueue<Integer>> undo = undoPruning();
         if (reviseFutureArcs(varList, var)) {
-            LinkedHashSet<Integer> copy = new LinkedHashSet<>(varList);
-            copy.remove(var);
+            LinkedList<Integer> copy = new LinkedList<>(varList);
+            copy.removeFirstOccurrence(var);
             forwardChecking(copy);
         }
-        this.domains = undoPruning;
-        this.assignments.set(var, -1);
+        this.domains = undo;
+        unassign(var, original);
     }
 
     public void deleteValue(int var, int val) {
@@ -139,27 +177,30 @@ public class Solver {
         this.domains.get(var).add(val);
     }
 
-    public void branchFCRight(LinkedHashSet<Integer> varList, int var, int val) {
+    
+
+    public void branchFCRight(LinkedList<Integer> varList, int var, int val) {
+        this.searchNodes++;
         deleteValue(var, val);
-        ArrayList<PriorityQueue<Integer>> undoPruning = new ArrayList<>(this.domains);
+        ArrayList<PriorityQueue<Integer>> undo = undoPruning();
         if (this.domains.get(var).size() != 0) {
             if (reviseFutureArcs(varList, var)) {
                 forwardChecking(varList);
             }
-            this.domains = undoPruning;
+            this.domains = undo;
         }
         restoreValue(var, val);
     }
 
-    public int selectVar(LinkedHashSet<Integer> varList) {
-        int selected = 2147483647; // setting selected to the maximum value for an int, used for finding the smallest domain
+    public int selectVar(LinkedList<Integer> varList) {
+        int selected = varList.peek();
         if (this.varOrder.equals("asc")) {
             selected = varList.iterator().next(); // retrieves the first element from the linked hash set
         }
         else if (this.varOrder.equals("sdf")){
             for (Integer i : varList) {
-                if (this.domains.get(i).size() < selected) {
-                    selected = this.domains.get(i).size();
+                if (this.domains.get(i).size() < this.domains.get(selected).size()) {
+                    selected = i;
                 }
             }
         }
@@ -170,7 +211,7 @@ public class Solver {
         return this.domains.get(var).peek();
     }
 
-    public void forwardChecking(LinkedHashSet<Integer> varList) {
+    public void forwardChecking(LinkedList<Integer> varList) {
         if (completeAssignment()) {
             printSolution();
             return;
@@ -181,14 +222,136 @@ public class Solver {
         branchFCRight(varList, var, val);
     }
 
+    public boolean ac3(int futureVar, int var) {
+        this.arcRevisions++;
+        boolean changed = false;
+        // if var is assigned and if var is not assigned
+        for (BinaryConstraint constraint : this.csp.getConstraints()) {
+            int firstVar = constraint.getFirstVar();
+            int secondVar = constraint.getSecondVar();
+            if (firstVar == futureVar && secondVar == var) {
+                PriorityQueue<Integer> updatedFutureDomain = new PriorityQueue<>(this.domains.get(futureVar));
+                for (Integer di : this.domains.get(futureVar)) {
+                    boolean supported = false;
+                    for (Integer dj : this.domains.get(var)) {
+                        if(supported) {
+                            break;
+                        }
+                        for (BinaryTuple t : constraint.getTuples()) {
+                            if (t.matches(di, dj)) {
+                                supported = true;
+                            }
+                        }
+                    }
+                    if (!supported) {
+                        updatedFutureDomain.remove(di);
+                        changed = true;
+                    }
+                }
+                this.domains.set(futureVar, updatedFutureDomain);
+            }
+            else if (firstVar == var && secondVar == futureVar) {
+                PriorityQueue<Integer> updatedFutureDomain = new PriorityQueue<>(this.domains.get(futureVar));
+                for (Integer di : this.domains.get(futureVar)) {
+                    boolean supported = false;
+                    for (Integer dj : this.domains.get(var)) {
+                        if(supported) {
+                            break;
+                        }
+                        for (BinaryTuple t : constraint.getTuples()) {
+                            if (t.matches(dj, di)) {
+                                supported = true;
+                            }
+                        }
+                    }
+                    if (!supported) {
+                        updatedFutureDomain.remove(di);
+                        changed = true;
+                    }
+                }
+                this.domains.set(futureVar, updatedFutureDomain);
+            }
+        }
+        return changed;
+    }
+
+    public boolean macAC3(int var) {
+        LinkedList<BinaryTuple> q = new LinkedList<>();
+        for (Integer i : this.arcs.get(var)) {
+            q.add(new BinaryTuple(i, var));
+        }
+        while (q.size() > 0) {
+            BinaryTuple cur = q.poll();
+            if (ac3(cur.getVal1(), cur.getVal2())) {
+                if (this.domains.get(cur.getVal1()).size() == 0) {
+                    return false;
+                }
+                for (Integer i : this.arcs.get(cur.getVal1())) {
+                    boolean dontAdd = false;
+                    for (BinaryTuple binaryTuple : q) {
+                        if ((binaryTuple.getVal1() == i || binaryTuple.getVal1() == cur.getVal2()) && binaryTuple.getVal2() == cur.getVal1()) {
+                            dontAdd = true;
+                        }
+                    }
+                    if (!dontAdd) {
+                        q.add(new BinaryTuple(i, cur.getVal1()));
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public void MAC3(LinkedList<Integer> varList) {
+        this.searchNodes++;
+        int var = selectVar(varList);
+        int val = selectVal(var);
+        PriorityQueue<Integer> original = assign(var, val);
+        ArrayList<PriorityQueue<Integer>> undo = undoPruning();
+        if (completeAssignment()) {
+            printSolution();
+            unassign(var, original);
+            return;
+        }
+        else if (macAC3(var)) {
+            LinkedList<Integer> copy = new LinkedList<>(varList);
+            copy.removeFirstOccurrence(var);
+            MAC3(copy);
+        }
+        this.domains = undo;
+        unassign(var, original);
+        deleteValue(var, val);
+        if (this.domains.get(var).size() > 0) {
+            undo = undoPruning();
+            if (macAC3(var)) {
+                MAC3(varList);
+            }
+            this.domains = undo;
+        }
+        restoreValue(var, val);
+    }
+
 
     public static void main(String[] args) {
+        long startTime = System.currentTimeMillis();
         if (args.length != 4) {
             System.out.println("Usage: java -jar P2.jar <*.csp> <fc|mac> <asc|sdf> <asc>") ;
             return ;
         }
         BinaryCSPReader reader = new BinaryCSPReader();
         Solver solver = new Solver(args[1], args[2], args[3], reader.readBinaryCSP(args[0]));
-        System.out.println(solver.getCsp());
+        LinkedList<Integer> varList = new LinkedList<>();
+        for (int i = 0; i < solver.getCsp().getNoVariables(); i++) {
+            varList.add(i);
+        }
+        if (solver.getAlgorithm().equals("fc")) {
+            solver.forwardChecking(varList);
+        }
+        else if (solver.getAlgorithm().equals("mac")) {
+            solver.MAC3(varList);
+        }
+        long endTime = System.currentTimeMillis();
+        System.out.println("Time in ms " + (endTime - startTime));
     }
 }
