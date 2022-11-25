@@ -5,7 +5,7 @@ public class Solver {
 
     public static void main(String[] args) {
         if (args.length != 4) {
-            System.out.println("Usage: java Solver <*.csp> <fc|mac> <asc|sdf> <asc>") ;
+            System.out.println("Usage: java -jar P2.jar <*.csp> <fc|mac> <asc|sdf> <asc>") ;
             return ;
         }
         for (String string : args) {
