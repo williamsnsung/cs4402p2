@@ -22,6 +22,7 @@ public final class BinaryCSP {
   public int getNoVariables() {
     return domainBounds.length ;
   }
+
   
   public int getLB(int varIndex) {
     return domainBounds[varIndex][0] ;

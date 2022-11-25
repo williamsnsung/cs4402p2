@@ -12,39 +12,10 @@
         },
         {
             "type": "java",
-            "name": "Launch BinaryCSPReader",
-            "request": "launch",
-            "mainClass": "BinaryCSPReader",
-            "projectName": "P2_7fe5b1cd"
-        },
-        {
-            "type": "java",
-            "name": "Launch LangfordsGenerator",
-            "request": "launch",
-            "mainClass": "LangfordsGenerator",
-            "projectName": "P2_7fe5b1cd"
-        },
-        {
-            "type": "java",
-            "name": "Launch QueensGenerator",
-            "request": "launch",
-            "mainClass": "QueensGenerator",
-            "projectName": "P2_7fe5b1cd"
-        },
-        {
-            "type": "java",
-            "name": "Launch SudokuGenerator",
-            "request": "launch",
-            "mainClass": "SudokuGenerator",
-            "projectName": "P2_7fe5b1cd"
-        },
-        {
-            "type": "java",
             "name": "4Queens",
             "request": "launch",
             "mainClass": "BinaryCSPReader",
             "args": ["./instances/4Queens.csp"],
-            "projectName": "P2_7fe5b1cd"
         }
     ]
 }
