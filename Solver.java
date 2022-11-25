@@ -1,13 +1,14 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.PriorityQueue;
+import java.util.LinkedHashSet;
 
 public class Solver {
     String algorithm;
     String varOrder;
     String valOrder;
     BinaryCSP csp;
-    HashMap <Integer, HashSet<Integer>> domains;
+    ArrayList<PriorityQueue<Integer>> domains;
+    ArrayList<Integer> assignments; 
     int searchNodes;
     int arcRevisions;
 
@@ -18,12 +19,15 @@ public class Solver {
         this.csp = csp;
         this.searchNodes = 0;
         this.arcRevisions = 0;
+        this.domains = new ArrayList<>();
+        this.assignments = new ArrayList<>();
         for (int i = 0; i < csp.getNoVariables(); i++) {
-            HashSet<Integer> domain = new HashSet<>();
+            PriorityQueue<Integer> domain = new PriorityQueue<>();
             for (int j = csp.getLB(i); j < csp.getUB(i) + 1; j++) {
                 domain.add(j);
             }
-            this.domains.put(i, domain);
+            this.domains.add(domain);
+            this.assignments.add(-1);
         }
     }
 
@@ -73,24 +77,24 @@ public class Solver {
         this.csp = csp;
     }
 
-    public boolean completeAssignment(LinkedHashMap<Integer, Integer> varList) {
+    public boolean completeAssignment() {
         int assigned = 0;
-        for (Integer i : varList.values()) {
+        for (Integer i : this.assignments) {
             if (i != -1) {
                 assigned++;
             }
         }
-        if (assigned == varList.size()) {
+        if (assigned == this.assignments.size()) {
             return true;
         }
         return false;
     }
 
-    public void printSolution(LinkedHashMap<Integer, Integer> varList) {
+    public void printSolution() {
         System.out.println(this.searchNodes);
         System.out.println(this.arcRevisions);
-        for (int i = 0; i < varList.size(); i++) {
-            System.out.println(varList.get(i));
+        for (Integer i : this.assignments) {
+            System.out.println(i);
         }
         System.out.println();
     }
@@ -102,10 +106,10 @@ public class Solver {
         return revised;
     }
 
-    public boolean reviseFutureArcs(LinkedHashMap<Integer, Integer> varList, int var) {
+    public boolean reviseFutureArcs(LinkedHashSet<Integer> varList, int var) {
         boolean consistent = true;
-        for (int futureVar : varList.keySet()) {
-            if (futureVar != var && varList.get(futureVar) == -1) {
+        for (int futureVar : varList) {
+            if (futureVar != var) {
                 consistent = revise(futureVar, var); //Prunes domain D(futureVar)
                 if (!consistent) {
                     return false;
@@ -115,49 +119,60 @@ public class Solver {
         return true;
     }
 
-    //TODO
-    public void undoPruning() {
-
-    }
-
-    public void branchFCLeft(LinkedHashMap<Integer, Integer> varList, int var, int val) {
-        varList.put(var, val);
+    public void branchFCLeft(LinkedHashSet<Integer> varList, int var, int val) {
+        this.assignments.set(var, val);
+        ArrayList<PriorityQueue<Integer>> undoPruning = new ArrayList<>(this.domains);
         if (reviseFutureArcs(varList, var)) {
-            varList.remove(var);
-            forwardChecking(varList);
+            LinkedHashSet<Integer> copy = new LinkedHashSet<>(varList);
+            copy.remove(var);
+            forwardChecking(copy);
         }
-        undoPruning();
-        varList.put(var, -1);
+        this.domains = undoPruning;
+        this.assignments.set(var, -1);
     }
 
-    public void branchFCRight(LinkedHashMap<Integer, Integer> varList, int var, int val) {
-        varList.remove(var, val);
+    public void deleteValue(int var, int val) {
+        this.domains.get(var).remove(val);
+    }
+
+    public void restoreValue(int var, int val) {
+        this.domains.get(var).add(val);
+    }
+
+    public void branchFCRight(LinkedHashSet<Integer> varList, int var, int val) {
+        deleteValue(var, val);
+        ArrayList<PriorityQueue<Integer>> undoPruning = new ArrayList<>(this.domains);
         if (this.domains.get(var).size() != 0) {
             if (reviseFutureArcs(varList, var)) {
                 forwardChecking(varList);
             }
-            undoPruning();
+            this.domains = undoPruning;
         }
-        varList.put(var, val);
+        restoreValue(var, val);
     }
 
-    //TODO
-    public int selectVar(LinkedHashMap<Integer, Integer> varList) {
-        int selected = 0;
-
+    public int selectVar(LinkedHashSet<Integer> varList) {
+        int selected = 2147483647; // setting selected to the maximum value for an int, used for finding the smallest domain
+        if (this.varOrder.equals("asc")) {
+            selected = varList.iterator().next(); // retrieves the first element from the linked hash set
+        }
+        else if (this.varOrder.equals("sdf")){
+            for (Integer i : varList) {
+                if (this.domains.get(i).size() < selected) {
+                    selected = this.domains.get(i).size();
+                }
+            }
+        }
         return selected;
     }
 
-    //TODO
     public int selectVal(int var) {
-        int val = 0;
-
-        return val;
+        return this.domains.get(var).peek();
     }
 
-    public void forwardChecking(LinkedHashMap<Integer, Integer> varList) {
-        if (completeAssignment(varList)) {
-            printSolution(varList);
+    public void forwardChecking(LinkedHashSet<Integer> varList) {
+        if (completeAssignment()) {
+            printSolution();
             return;
         }
         int var = selectVar(varList);
