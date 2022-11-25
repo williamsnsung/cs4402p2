@@ -1,0 +1,50 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Launch Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "Launch BinaryCSPReader",
+            "request": "launch",
+            "mainClass": "BinaryCSPReader",
+            "projectName": "P2_7fe5b1cd"
+        },
+        {
+            "type": "java",
+            "name": "Launch LangfordsGenerator",
+            "request": "launch",
+            "mainClass": "LangfordsGenerator",
+            "projectName": "P2_7fe5b1cd"
+        },
+        {
+            "type": "java",
+            "name": "Launch QueensGenerator",
+            "request": "launch",
+            "mainClass": "QueensGenerator",
+            "projectName": "P2_7fe5b1cd"
+        },
+        {
+            "type": "java",
+            "name": "Launch SudokuGenerator",
+            "request": "launch",
+            "mainClass": "SudokuGenerator",
+            "projectName": "P2_7fe5b1cd"
+        },
+        {
+            "type": "java",
+            "name": "4Queens",
+            "request": "launch",
+            "mainClass": "BinaryCSPReader",
+            "args": ["./instances/4Queens.csp"],
+            "projectName": "P2_7fe5b1cd"
+        }
+    ]
+}
